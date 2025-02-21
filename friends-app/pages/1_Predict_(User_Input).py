@@ -105,20 +105,21 @@ with st.form("my_form"):
 
     # Every form must have a submit button
     submitted = st.form_submit_button('Submit')
-if submitted:
-    st.write(person, consent_val)
 
 # TODO: Feed to API
-url = SERVER_URL + ":" + SERVER_PORT + "/" + END_POINT
-response = requests.post(url, json=person)
+if submitted:
+    st.write(person, consent_val)
+    url = SERVER_URL + ":" + SERVER_PORT + "/" + END_POINT
+    response = requests.post(url, json=person)
 
 # TODO: Display Prediction
-result_code = response.status_code
-result_data = response.json()
-if result_code // 100 < 4:
-    st.success("Prediction successful")
-    st.write(response.json())
-else:
-    st.error("Prediction failed")
+if submitted and response:
+    result_code = response.status_code
+    result_data = response.json()
+    if result_code // 100 < 4:
+        st.success("Prediction successful")
+        st.write(response.json())
+    else:
+        st.error("Prediction failed")
 
 
