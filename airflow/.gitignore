@@ -1,0 +1,4 @@
+config/airflow.cfg
+logs/dag_processor_manager
+logs/scheduler
+dags/__pycache__
