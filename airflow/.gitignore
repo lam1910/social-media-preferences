@@ -1,4 +1,4 @@
 config/airflow.cfg
-logs/dag_processor_manager
-logs/scheduler
+logs/*
 dags/__pycache__
+data/*/*.csv
