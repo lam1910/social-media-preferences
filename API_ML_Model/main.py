@@ -1,11 +1,23 @@
 
-from typing import Union, List, Dict
+from fastapi import FastAPI, Depends, HTTPException
+from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from datetime import datetime
-from sqlalchemy.orm import session
-from fastapi import HTTPException
+from typing import Union, List, Dict
+from database import SessionLocal, Prediction
 
+app = FastAPI()
 
+# Dependency to get a database session
+def get_db():
+    """
+    Provides a database session for each request.
+    Closes the session after the request is completed.
+    """
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 # Define the request model
 class PredictionRequest(BaseModel):
@@ -18,10 +30,10 @@ class PredictionRequest(BaseModel):
 
 # Define the response model
 class PredictionResponse(BaseModel):
-    id: int
+    
     features: Dict[str, float]
     prediction: float
-    timestamp: datetime
+    
     """
     Represents the structure of the response returned after making a prediction.
     """
@@ -41,3 +53,6 @@ def predict(request: PredictionRequest):
         feature_sets = request.features
     else:
         raise HTTPException(status_code=400, detail="Invalid format for 'features'. Must be a dict or list of dicts.")
+
+
+
