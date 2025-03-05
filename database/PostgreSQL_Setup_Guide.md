@@ -5,7 +5,7 @@ This Setup Guide will walk you step-by-step through the process of installing Po
 
 ## Prerequisites
 
-- OS: Windows / macOS / Linux
+- OS: Windows
 
 ## Installation
 
@@ -15,7 +15,6 @@ This Setup Guide will walk you step-by-step through the process of installing Po
 
 ### 2. Start PostgreSQL
 
-#### On Windows:
 - **Using Services Manager:**
    1. Press `Win + R`, type `services.msc`, and press `Enter`.
    2. In the **Services** window, scroll down to find **PostgreSQL** (it will typically be listed as **PostgreSQL <version>**).
@@ -36,8 +35,6 @@ psql --version
   **Solution:** Add PostgreSQL to your system's PATH.
 
   **Steps:**
-
-  - **For Windows:**
     1. Open the Start menu, search for "Environment Variables," and select **Edit the system environment variables**.
     2. In the System Properties window, click **Environment Variables**.
     3. Under the **System variables** section, scroll down and select **Path**, then click **Edit**.
@@ -60,12 +57,6 @@ psql --version
        ```
      - You may need to navigate to the PostgreSQL `bin` directory if the `psql` command is not in your system’s PATH.
 
-   - **macOS/Linux**:
-     - Open **Terminal** and type:
-       ```sh
-       psql -U postgres
-       ```
-
 ### 2. Create a new database:
    - Please refer to the Raw_Database.sql for more instructions.
 
@@ -78,7 +69,6 @@ psql --version
 - Default port: `5432`
 - To modify settings, edit `postgresql.conf`. This can be accessed through:
   - **Windows**: `C:\Program Files\PostgreSQL\<version>\data\postgresql.conf`
-  - **Linux/macOS**: `/etc/postgresql/<version>/main/postgresql.conf` or `/var/lib/pgsql/data/postgresql.conf`
 
 ## Create the Raw Marketing Data Table
   - Please refer to the Raw_Database.sql for more instructions.
