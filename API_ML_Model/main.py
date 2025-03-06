@@ -59,10 +59,15 @@ def get_db():
     finally:
         db.close()
 
-# --- Pydantic Models ---
+# # Define the request model.
+# The "features" can be a dict (single instance) or a list of dicts.
 class PredictionRequest(BaseModel):
-    features: Dict[str, Union[float, int, str]]
+    features: Union[
+        Dict[str, Union[float, int, str]], 
+        List[Dict[str, Union[float, int, str]]]
+    ]
 
+# Define the response model.
 class PredictionResponse(BaseModel):
     features: Dict[str, Union[float, int, str]]
     prediction: float
@@ -116,6 +121,8 @@ def predict(request: PredictionRequest, db: Session = Depends(get_db)):
     # Wrap the single dictionary into a list.
     if isinstance(request.features, dict):
         raw_feature_sets = [request.features]
+    elif isinstance(request.features, list) and all(isinstance(f, dict) for f in request.features):
+        raw_feature_sets = request.features
     else:
         raise HTTPException(status_code=400, detail="Invalid format for feature input; must be a dict.")
 
