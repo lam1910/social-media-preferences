@@ -2,10 +2,21 @@ import streamlit as st
 import requests
 import pandas as pd
 from urllib.parse import urlencode, urlunparse
+import json
 
 SERVER_URL = "http://127.0.0.1"
 SERVER_PORT = "8000"
 END_POINT = "predict"
+
+GROUP_TEXT = {
+    0: '17 year old, have few friends, rarely post about dance, music, god',
+    1: '17 year old or younger, have a lot of friends (50-80), post about music, god',
+    2: '17-18 year old, super popular (150+ friends), post about music, god the most, most likely female',
+    3: '17 year old, have a bit of friends (20-30), post about music more than everyone',
+    4: 'Funny, trolling group',
+    5: '17-18 year old, very popular (80-150), post about dance, music, most likely female',
+    6: '17 year old, have big group of friends (30-50), post about music, god',
+}
 
 st.set_page_config(page_title="Predict (User Input)", page_icon="✍️")
 
@@ -55,62 +66,22 @@ with st.form("my_form"):
     drugs = st.number_input('How many time did you post #drugs?', min_value=0, max_value=400, step=5)
 
     # To list of value
-    person = [
-        {
-            'gradyear': grad_year,
-            'gender': gender,
-            'age': age,
-            'NumberOffriends': no_friends,
-            'basketball': basketball,
-            'football': football,
-            'soccer': soccer,
-            'softball': softball,
-            'volleyball': volleyball,
-            'swimming': swimming,
-            'cheerleading': cheerleading,
-            'baseball': baseball,
-            'tennis': tennis,
-            'sports': sports,
-            'cute': cute,
-            'sex': sex,
-            'sexy': sexy,
-            'hot': hot,
-            'kissed': kissed,
-            'dance': dance,
-            'band': band,
-            'marching': marching,
-            'music': music,
-            'rock': rock,
-            'god': god,
-            'church': church,
-            'jesus': jesus,
-            'bible': bible,
-            'hair': hair,
-            'dress': dress,
-            'blonde': blonde,
-            'mall': mall,
-            'shopping': shopping,
-            'clothes': clothes,
-            'hollister': hollister,
-            'abercrombie': abercrombie,
-            'die': die,
-            'death': death,
-            'drunk': drunk,
-            'drugs': drugs
-        }
-    ]
-    consent_val = st.checkbox('By choose this, you agree to send your data to us to train our model', value=False)
-    if consent_val:
-        st.write('Consent OK')
+    person = dict(gradyear=grad_year, gender=gender, age=age, NumberOffriends=no_friends, basketball=basketball,
+                  football=football, soccer=soccer, softball=softball, volleyball=volleyball, swimming=swimming,
+                  cheerleading=cheerleading, baseball=baseball, tennis=tennis, sports=sports, cute=cute, sex=sex,
+                  sexy=sexy, hot=hot, kissed=kissed, dance=dance, band=band, marching=marching, music=music, rock=rock,
+                  god=god, church=church, jesus=jesus, bible=bible, hair=hair, dress=dress, blonde=blonde, mall=mall,
+                  shopping=shopping, clothes=clothes, hollister=hollister, abercrombie=abercrombie, die=die,
+                  death=death, drunk=drunk, drugs=drugs)
+
 
     # Every form must have a submit button
     submitted = st.form_submit_button('Submit')
 
 # TODO: Feed to API
 if submitted:
-    st.write(person, consent_val)
     url = SERVER_URL + ":" + SERVER_PORT + "/" + END_POINT
-    response = requests.post(url, json=person)
+    response = requests.post(url, data=json.dumps({'features': [person]}))
 
 # TODO: Display Prediction
 if submitted and response:
@@ -118,7 +89,8 @@ if submitted and response:
     result_data = response.json()
     if result_code // 100 < 4:
         st.success("Prediction successful")
-        st.write(response.json())
+        response_result = response.json()
+        st.write('Person group: {}'.format(GROUP_TEXT[int(response_result['prediction'])]))
     else:
         st.error("Prediction failed")
 

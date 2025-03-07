@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import requests
+import json
 
 
 PERSONAL_ATTRIBUTES = [
@@ -30,6 +31,16 @@ SERVER_URL = "http://127.0.0.1"
 SERVER_PORT = "8000"
 END_POINT = "predict"
 
+GROUP_TEXT = {
+    0: '17 year old, have few friends, rarely post about dance, music, god',
+    1: '17 year old or younger, have a lot of friends (50-80), post about music, god',
+    2: '17-18 year old, super popular (150+ friends), post about music, god the most, most likely female',
+    3: '17 year old, have a bit of friends (20-30), post about music more than everyone',
+    4: 'Funny, trolling group',
+    5: '17-18 year old, very popular (80-150), post about dance, music, most likely female',
+    6: '17 year old, have big group of friends (30-50), post about music, god',
+}
+
 st.set_page_config(page_title="Predict (Mass)", page_icon="📝")
 # TODO: Read and parse file
 uploaded_file = st.file_uploader("Choose an csv file", type="csv")
@@ -39,24 +50,22 @@ if uploaded_file:
     if has_index:
         try:
             if not has_header:
-                df1 = pd.read_csv(uploaded_file, names=ALL_ATTRIBUTES, index_col=0, dtype=ALL_ATTRIBUTES_TYPE)
+                df1 = pd.read_csv(uploaded_file, names=ALL_ATTRIBUTES, index_col=0, dtype=ALL_ATTRIBUTES_TYPE, na_filter=False)
             else:
-                df1 = pd.read_csv(uploaded_file, header=0, index_col=0, dtype=ALL_ATTRIBUTES_TYPE)
-            people = df1.to_json(orient='records', lines=True).split('\n')
+                df1 = pd.read_csv(uploaded_file, header=0, index_col=0, dtype=ALL_ATTRIBUTES_TYPE, na_filter=False)
+            people = df1.to_dict(orient='records')
             st.write(df1)
-            st.write(people)
         except Exception as e:
             st.warning("File is not valid")
             st.error(e)
     else:
         try:
             if not has_header:
-                df1 = pd.read_csv(uploaded_file, names=ALL_ATTRIBUTES, dtype=ALL_ATTRIBUTES_TYPE)
+                df1 = pd.read_csv(uploaded_file, names=ALL_ATTRIBUTES, dtype=ALL_ATTRIBUTES_TYPE, na_filter=False)
             else:
-                df1 = pd.read_csv(uploaded_file, header=0, dtype=ALL_ATTRIBUTES_TYPE)
-            people = df1.to_json(orient='records', lines=True).split('\n')
+                df1 = pd.read_csv(uploaded_file, header=0, dtype=ALL_ATTRIBUTES_TYPE, na_filter=False)
+            people = df1.to_dict(orient='records')
             st.write(df1)
-            st.write(people)
         except Exception as e:
             st.warning("File is not valid")
             st.error(e)
@@ -64,14 +73,16 @@ if uploaded_file:
 # TODO: Feed to API
 url = SERVER_URL + ":" + SERVER_PORT + "/" + END_POINT
 if uploaded_file:
-    response = requests.post(url, json=people)
+    response = requests.post(url, data=json.dumps({'features': people}))
 # TODO: Display Prediction
 if uploaded_file and response:
     result_code = response.status_code
     result_data = response.json()
     if result_code // 100 < 4:
         st.success("Prediction successful")
-        st.write(response.json())
+        response_result = response.json()
+        for i in range(len(response_result)):
+            st.write('Person {} group: {}'.format(i + 1, GROUP_TEXT[response_result[i]['prediction']]))
     else:
         st.error("Prediction failed")
 
