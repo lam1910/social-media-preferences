@@ -1,20 +1,42 @@
--- Table: public.Clustering Marketing
+-- First time user, copy the content of each part below, uncomment it, and run 1 TIMES
 
--- DROP TABLE IF EXISTS public."Clustering Marketing";
-
-CREATE TABLE IF NOT EXISTS public."Clustering Marketing"
-(
-)
-
-TABLESPACE pg_default;
-
-ALTER TABLE IF EXISTS public."Clustering Marketing"
-    OWNER to postgres;
+-- Creating a Database
+--DO $$ 
+--BEGIN
+--    IF NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = "DSP_Project") THEN
+--        CREATE DATABASE "DSP_Project";
+--    END IF;
+--END $$;
 
 
-DROP TABLE IF EXISTS marketing_data_raw;
+-- Connecting to the server
+--\c "DSP_Project";
 
-	CREATE TABLE marketing_data_raw (
+
+-- Creating a Schema
+--CREATE SCHEMA IF NOT EXISTS dsp;
+
+-- Setting a path to the Schema
+-- SET search_path TO dsp;
+
+-- Table: dsp.Clustering Marketing
+
+-- DROP TABLE IF EXISTS dsp."Clustering_Marketing";
+
+-- CREATE TABLE IF NOT EXISTS dsp."Clustering_Marketing"
+-- (
+-- )
+
+--TABLESPACE pg_default;
+
+--ALTER TABLE IF EXISTS dsp."Clustering_Marketing"      
+--    OWNER to postgres;
+
+
+
+DROP TABLE IF EXISTS dsp.marketing_data_raw;
+
+	CREATE TABLE dsp.marketing_data_raw (
     gradyear INTEGER,
     gender TEXT,
     age TEXT,
@@ -58,10 +80,10 @@ DROP TABLE IF EXISTS marketing_data_raw;
 );
 
 
-copy marketing_data_raw 
-FROM 'C:\Program Files\PostgreSQL\17\data\03_Clustering_Marketing.csv' 
-DELIMITER ',' 
-CSV HEADER;
+-- copy dsp.marketing_data_raw 
+-- FROM '../03_Clustering_Marketing.csv' 
+-- DELIMITER ',' 
+-- CSV HEADER;
 
 
 
