@@ -93,10 +93,10 @@ def _make_predictions(ti) -> None:
     prediction_data = conn.execute(f'SELECT * FROM read_csv({new_files});').fetchdf()
     
     # Parse the df to json
-    prediction_json = prediction_data.to_json(orient='records')
+    prediction_json = prediction_data.to_dict(orient='records')
 
     # Make the API call
-    response = requests.post(url, json={"prediction_features":prediction_json})
+    response = requests.post(url, data=json.dumps({'features': prediction_json}))
 
     # Mapping status codes with corresponding handlers
     response_handler = {
