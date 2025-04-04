@@ -81,4 +81,55 @@ ax.set_title('Average API Processing Time')
 plt.savefig('charts/images/avg_api_speed.png')
 plt.show()
 
+# Define parameters
+years = [2024, 2025]
+months = list(range(1, 13))
+sport_types = ['basketball','football','soccer','softball','volleyball','swimming','cheerleading','baseball','tennis','sports']
+num_rows = 100  # Number of rows to generate
 
+# Generate random data
+np.random.seed(42)  # For reproducibility
+data = {
+    "Year": np.random.choice(years, num_rows),
+    "Month": np.random.choice(months, num_rows),
+    "Sport": np.random.choice(sport_types, num_rows),
+    "Number of post": np.random.randint(16, 127, num_rows)  # Random error count
+}
+df_sport = pd.DataFrame(data)
+
+df_sport = df_sport.groupby(['Month', 'Sport']).agg(
+    {
+        'Number of post': 'sum'
+    }
+)
+df_sport = df_sport.reset_index()
+a = sns.lineplot(data=df_sport, x='Month', y='Number of post', hue='Sport', estimator=None)
+ax = sns.histplot(
+    data=df_sport, x='Month', hue='Sport', bins=12, weights='Number of post', multiple='stack', shrink=0.8
+)
+ax.set_ylabel('Number of Post')
+ax.set_xlabel('Month')
+ax.set_title('Number of sport post per month')
+plt.savefig('charts/images/sport_chart_by_month.png')
+plt.show()
+
+cols = [
+    'basketball','football','soccer','softball','volleyball','swimming','cheerleading','baseball','tennis','sports',
+    'cute','sex','sexy','hot','kissed','dance','band','marching','music','rock','god','church','jesus','bible','hair',
+    'dress','blonde','mall','shopping','clothes','hollister','abercrombie','die','death','drunk','drugs'
+]
+rows = list(range(7))
+rows = ['Group ' + str(idx) for idx in rows]
+
+d_hm = {}
+for row in rows:
+    d_hm[row] = np.random.randint(0, 127, len(cols))
+
+df_hm = pd.DataFrame.from_dict(d_hm, orient='index', columns=cols)
+
+ax = sns.heatmap(data=df_hm.T, fmt='d', cmap='YlGnBu')
+ax.set_xlabel('Group')
+ax.set_ylabel('Keywords')
+ax.set_title('Keyword of each groups')
+plt.savefig('charts/images/keywords_chart.png')
+plt.show()
