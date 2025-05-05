@@ -1,26 +1,25 @@
+import traceback
+
 import streamlit as st
 import requests
 import pandas as pd
 from urllib.parse import urlencode, urlunparse
 import json
 
-SERVER_URL = "http://127.0.0.1"
-SERVER_PORT = "8000"
 END_POINT = "predict"
-
-GROUP_TEXT = {
-    0: '17 year old, have few friends, rarely post about dance, music, god',
-    1: '17 year old or younger, have a lot of friends (50-80), post about music, god',
-    2: '17-18 year old, super popular (150+ friends), post about music, god the most, most likely female',
-    3: '17 year old, have a bit of friends (20-30), post about music more than everyone',
-    4: 'Funny, trolling group',
-    5: '17-18 year old, very popular (80-150), post about dance, music, most likely female',
-    6: '17 year old, have big group of friends (30-50), post about music, god',
-}
 
 st.set_page_config(page_title="Predict (User Input)", page_icon="✍️")
 
 # TODO: create a form input
+try:
+    base_url = st.session_state['base_url']
+    group_text = st.session_state['group_meaning']
+    url = base_url + "/" + END_POINT
+except KeyError as err:
+    st.warning('It seems like you are bypassing the main page. Please return to the main page first')
+    url = 'http://localhost:8000' + "/" + END_POINT
+    st.error(traceback.format_exc())
+
 # Create a form
 with st.form("my_form"):
     st.write("Some info about yourself")
@@ -74,13 +73,11 @@ with st.form("my_form"):
                   shopping=shopping, clothes=clothes, hollister=hollister, abercrombie=abercrombie, die=die,
                   death=death, drunk=drunk, drugs=drugs)
 
-
     # Every form must have a submit button
     submitted = st.form_submit_button('Submit')
 
 # TODO: Feed to API
 if submitted:
-    url = SERVER_URL + ":" + SERVER_PORT + "/" + END_POINT
     response = requests.post(url, data=json.dumps({'features': [person]}))
 
 # TODO: Display Prediction
@@ -90,8 +87,6 @@ if submitted and response:
     if result_code // 100 < 4:
         st.success("Prediction successful")
         response_result = response.json()
-        st.write('Person group: {}'.format(GROUP_TEXT[int(response_result['prediction'])]))
+        st.write('Person group: {}'.format(group_text[int(response_result['prediction'])]))
     else:
         st.error("Prediction failed")
-
-
