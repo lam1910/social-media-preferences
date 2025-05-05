@@ -1,4 +1,6 @@
 import os
+from datetime import datetime
+
 import joblib
 import numpy as np
 import pandas as pd
@@ -70,6 +72,7 @@ class PredictionRequest(BaseModel):
 # Define the response model.
 class PredictionResponse(BaseModel):
     features: Dict[str, Union[float, int, str]]
+    insertion_timestamp: datetime
     prediction: float
 
 # --- HELPER FUNCTION FOR PROCESSING GENDER ---
