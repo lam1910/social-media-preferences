@@ -79,7 +79,7 @@ x-airflow-common:
     - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
     - ${AIRFLOW_PROJ_DIR:-.}/data:/opt/airflow/data # Added to have access to the data folder
     - ${AIRFLOW_PROJ_DIR:-.}/scripts:/opt/airflow/scripts # Added to have access to other scripts, i.e. .sh, .py, etc.
-    
+    - ../mock_data_issues:/opt/airflow/dags/modules/mock_data_issues # Added module to generate data quality issues
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
     &airflow-common-depends-on
