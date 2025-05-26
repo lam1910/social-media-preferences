@@ -251,3 +251,5 @@ fabric.properties
 # PyPI configuration file
 .pypirc
 
+# mock_data_issues
+mock_data_issues/__pycache__
