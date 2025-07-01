@@ -1,4 +1,4 @@
 apache-airflow-providers-common-sql==1.21.0
 apache-airflow-providers-postgres==6.0.0
-airflow-provider-great-expectations==0.3.0
+airflow-provider-great-expectations==1.0.0a3 # Agregar en commits
 duckdb==1.2.0
