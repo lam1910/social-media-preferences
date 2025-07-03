@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Dict, Union, List
 from database import SessionLocal, Prediction
+from datetime import datetime
 
 app = FastAPI()
 
@@ -71,6 +72,7 @@ class PredictionRequest(BaseModel):
 # Define the response model.
 class PredictionResponse(BaseModel):
     features: Dict[str, Union[float, int, str]]
+    insertion_timestamp: datetime
     prediction: float
 
 # --- HELPER FUNCTION FOR PROCESSING GENDER ---
