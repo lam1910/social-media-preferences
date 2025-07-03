@@ -33,12 +33,12 @@ def parse_gxe_output(gxe_output: dict, file_name: str) -> dict:
     observed_set = set()
 
     for e in expectations:
-        if e["expectation_type"] == "expect_table_column_count_to_equal":
-            num_expected_features = e["kwargs"].get("value")
-            num_observed_features = e["result"].get("observed_value")
-        elif e["expectation_type"] == "expect_table_columns_to_match_set":
-            expected_set = set(e["kwargs"].get("column_set", []))
-            observed_set = set(e["result"].get("observed_value", []))
+        if e['expectation_type'] == 'expect_table_column_count_to_equal':
+            num_expected_features = e['kwargs'].get('value')
+            num_observed_features = e['result'].get('observed_value')
+        elif e['expectation_type'] == 'expect_table_columns_to_match_set':
+            expected_set = set(e['kwargs'].get('column_set', []))
+            observed_set = set(e['result'].get('observed_value', []))
 
     new_features = [*observed_set - expected_set]
     missing_features = [*expected_set - observed_set]
@@ -46,16 +46,15 @@ def parse_gxe_output(gxe_output: dict, file_name: str) -> dict:
     num_new_features = len(new_features)
     num_missing_features = len(missing_features)
 
-    #num_data_errors = gxe_output["statistics"].get("unsuccessful_expectations", 0)
     num_samples = 0
     num_affected_samples = 0
 
     for e in expectations:
-        res = e.get("result", {})
-        if isinstance(res, dict) and "element_count" in res:
-            num_samples = max(num_samples, res.get("element_count", 0))
-        if isinstance(res, dict) and "unexpected_count" in res:
-            num_affected_samples += res.get("unexpected_count", 0)
+        res = e.get('result', {})
+        if isinstance(res, dict) and 'element_count' in res:
+            num_samples = max(num_samples, res.get('element_count', 0))
+        if isinstance(res, dict) and 'unexpected_count' in res:
+            num_affected_samples += res.get('unexpected_count', 0)
 
     
     column_error_types = [(f, 'missing') for f in missing_features] + [(f, 'new') for f in new_features]
@@ -64,12 +63,12 @@ def parse_gxe_output(gxe_output: dict, file_name: str) -> dict:
     different_error_types = set()
 
     for e in expectations:
-        if not e.get("success", True) and "column" in e.get("kwargs", {}):
-            column = e["kwargs"]["column"]
-            error_type = e["expectation_type"]
-            result = e.get("result", {})
-            num_records = result.get("element_count", num_samples)
-            num_affected = result.get("unexpected_count", 0)
+        if not e.get('success', True) and 'column' in e.get('kwargs', {}):
+            column = e['kwargs']['column']
+            error_type = e['expectation_type']
+            result = e.get('result', {})
+            num_records = result.get('element_count', num_samples)
+            num_affected = result.get('unexpected_count', 0)
             different_error_types.add(error_type)
 
             feature_error_stats.append((column, error_type, num_records, num_affected))
@@ -119,7 +118,7 @@ def _save_statistics(ti):
         VALUES (%s, NOW())
         RETURNING batch_id;
     """
-    batch_id = pg_hook.get_first(insert_metadata_sql, parameters=parsed["ingestion_metadata"])[0]
+    batch_id = pg_hook.get_first(insert_metadata_sql, parameters=parsed['ingestion_metadata'])[0]
 
     # Storing if we got a missing or new feature
     insert_batch_sql = """
@@ -128,7 +127,7 @@ def _save_statistics(ti):
             num_missing_features, num_data_errors, num_samples, num_affected_samples)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
     """
-    pg_hook.run(insert_batch_sql, parameters=(batch_id, *parsed["batch_columns_stats"]))
+    pg_hook.run(insert_batch_sql, parameters=(batch_id, *parsed['batch_columns_stats']))
 
     # Inserting multiples rows at once
     def bulk_insert(table_name, headers, rows):
@@ -139,15 +138,63 @@ def _save_statistics(ti):
             commit_every=100
         )
 
-    if parsed["column_error_types"]:
-        rows = [(batch_id, row[0], row[1]) for row in parsed["column_error_types"]]
-        bulk_insert("marketing_ingestion_statistics.column_error_types", ["batch_id", "feature", "col_error_type"], rows)
+    if parsed['column_error_types']:
+        rows = [(batch_id, row[0], row[1]) for row in parsed['column_error_types']]
+        bulk_insert('marketing_ingestion_statistics.column_error_types', ['batch_id', 'feature', 'col_error_type'], rows)
 
-    if parsed["feature_error_stats"]:
-        rows = [(batch_id, row[0], row[1], row[2], row[3]) for row in parsed["feature_error_stats"]]
-        bulk_insert("marketing_ingestion_statistics.feature_error_stats", ["batch_id", "feature", "error_type", "num_records", "num_affected_records"], rows)
+    if parsed['feature_error_stats']:
+        rows = [(batch_id, row[0], row[1], row[2], row[3]) for row in parsed['feature_error_stats']]
+        bulk_insert('marketing_ingestion_statistics.feature_error_stats', ['batch_id', 'feature', 'error_type', 'num_records', 'num_affected_records'], rows)
 
-    print(f"Ingestion statistics saved for batch_id {batch_id}")
+    print(f'Ingestion statistics saved for batch_id {batch_id}')
+
+
+def _send_alerts(**context):
+    import requests
+    
+    get_gxe_report_res = context['task_instance'].xcom_pull(task_ids='validate_data', key='return_value')
+    success = get_gxe_report_res['success']
+    success_percent = get_gxe_report_res['statistics']['success_percent']
+
+    
+    if not success and success_percent < 100:
+        criticallity = 'High' if success_percent <= 50 else 'medium' if success_percent <= 85 else 'low'
+        print('Sending Teams alert')
+        payload = {
+            "@type": "MessageCard",
+            "@context": "http://schema.org/extensions",
+            "title": f"{criticallity.upper()} SEVERITY | Data Validation Alert",
+            "summary": f"Task {context['task_instance_key_str']} failed",
+            "themeColor": "0078D7",
+            "sections": [
+                {
+                    "activityTitle": f"Task {context['task_instance_key_str']} failed",
+                    "activitySubtitle": f"DAG: {context['dag'].dag_id}",
+                    "facts": [
+                        {
+                            "name": "Logical Date",
+                            "value": context['ds']
+                        },
+                        {
+                            "name": "Log URL",
+                            "value": context['task_instance'].log_url
+                        }
+                    ]
+                }
+            ],
+            "potentialAction": [{
+                "@type": "OpenUri",
+                "name": "View Logs",
+                "targets": [{
+                    "os": "default",
+                    "uri": context['task_instance'].log_url
+                }]
+            }]
+        }
+        
+        headers = {"content-type": "application/json"}
+        requests.post(Variable.get('teams_webhook'), json=payload, headers=headers)
+        print("Teams alert sent")
 
 
 expectation_suite = ExpectationSuite(
@@ -381,7 +428,9 @@ with DAG (
     _save_file = save_file()
 
 
-    dummy_task = DummyOperator(task_id='send_alerts')
+    send_alerts = PythonOperator(
+        task_id='send_alerts',
+        python_callable=_send_alerts)
 
 
     save_statistics = PythonOperator(
@@ -391,4 +440,4 @@ with DAG (
 
 
 # Execution order of tasks
-_read_data >> validate_data >> [_save_file, dummy_task, save_statistics]
+_read_data >> validate_data >> [_save_file, send_alerts, save_statistics]
