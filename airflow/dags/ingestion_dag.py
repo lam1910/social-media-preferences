@@ -19,9 +19,11 @@ from great_expectations_provider.operators.validate_dataframe import ( # type: i
 def retrieve_df_for_gx_validation():
     import duckdb # type: ignore
     
-    conn = duckdb.connect('ingest.ddb')
-    df = conn.execute('SELECT * FROM latest').fetchdf()
-    return df
+    try:
+        conn = duckdb.connect('ingest.ddb')
+        return conn.execute('SELECT * FROM latest').fetchdf()
+    except:
+        return 0
 
 
 def parse_gxe_output(gxe_output: dict, file_name: str) -> dict: 
