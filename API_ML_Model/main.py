@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Dict, Union, List
 from database import SessionLocal, Prediction
+from datetime import datetime
 
 app = FastAPI()
 
@@ -19,6 +20,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "..", "model", "model-binary")
 print("Absolute MODEL_PATH:", MODEL_PATH)
 print("Files in MODEL_PATH:", os.listdir(MODEL_PATH))
+
 
 # Load the pickled objects.
 ohe = joblib.load(os.path.join(MODEL_PATH, 'gender-encoder.pkl'))
@@ -129,7 +131,7 @@ def predict(request: PredictionRequest, db: Session = Depends(get_db)):
     else:
         raise HTTPException(status_code=400, detail="Invalid format for feature input; must be a dict.")
 
-    predictions = []
+    predictions = []  # This will now store Prediction objects to be bulk inserted.
 
     for raw_features in raw_feature_sets:
         print("Raw features received:", raw_features)
@@ -139,110 +141,73 @@ def predict(request: PredictionRequest, db: Session = Depends(get_db)):
                 raise HTTPException(status_code=400, detail=f"Missing raw feature: {key}")
 
         final_features = {}
-        frequencies = ['basketball',
-    'football', 'soccer', 'softball', 'volleyball', 'swimming', 'cheerleading',
-    'baseball', 'tennis', 'sports', 'cute', 'sex', 'sexy', 'hot', 'kissed',
-    'dance', 'band', 'marching', 'music', 'rock', 'god', 'church', 'jesus',
-    'bible', 'hair', 'dress', 'blonde', 'mall', 'shopping', 'clothes',
-    'hollister', 'abercrombie', 'die', 'death', 'drunk', 'drugs']
-        singulier  = ["gradyear","age", "NumberOffriends","basketball"]
+        frequencies = [
+            'basketball', 'football', 'soccer', 'softball', 'volleyball', 'swimming', 'cheerleading',
+            'baseball', 'tennis', 'sports', 'cute', 'sex', 'sexy', 'hot', 'kissed',
+            'dance', 'band', 'marching', 'music', 'rock', 'god', 'church', 'jesus',
+            'bible', 'hair', 'dress', 'blonde', 'mall', 'shopping', 'clothes',
+            'hollister', 'abercrombie', 'die', 'death', 'drunk', 'drugs'
+        ]
+        singulier = ["gradyear", "age", "NumberOffriends", "basketball"]
 
-        # Filter the raw features for the relevant keys in 'frequencies'
+        # Filter features
         filtered_raw_features = {key: raw_features[key] for key in frequencies if key in raw_features}
         singulier_raw_features = {key: raw_features[key] for key in singulier if key in raw_features}
 
-        print("Filtered raw features:", filtered_raw_features)
-
-        # --- Process Gender ---
+        # Process gender
         raw_gender = raw_features["gender"]
-        print("Processing gender value:", raw_gender)
-        try:
-            gender_features = process_gender(raw_gender)
-            final_features.update(gender_features)
-        except Exception as ge:
-            raise HTTPException(status_code=400, detail=f"Error processing gender: {str(ge)}")
+        gender_features = process_gender(raw_gender)
+        final_features.update(gender_features)
 
-        # --- Process Remaining Features ---
+        # Process remaining features
         for col in singulier_raw_features:
-            print(f"Processing feature: {col}, Raw Value: {raw_features[col]}")
-
             raw_value = singulier_raw_features[col]
-            print(f"Processing feature: {col}, Raw Value: {singulier_raw_features}, Type: {type(raw_value)}")
 
-            # Process 'gradyear' with scaling
             if col == "gradyear":
                 transformed_value = mms.transform([[raw_value]])
-                print(f"Scaled gradyear output (Type: {type(transformed_value)}):", transformed_value)
-                # Ensure it's an array before accessing elements
                 transformed_value = transformed_value.to_numpy().flatten()[0]
                 final_features[col] = float(transformed_value)
-                print(final_features)
 
             elif col in ["age", "NumberOffriends"]:
                 final_features[col] = float(raw_value)
-                print(f"Floated value {col} output (Type: {type(final_features[col])}):", final_features[col])
-                print(final_features)    
 
-            
             elif col == "basketball":
-                print(filtered_raw_features)
-                # For other features that need to be scaled using `sts`
-                try:
-                    # Here we extract the numeric features for scaling
-                    numeric_features = list(filtered_raw_features.values())  # Get feature values as a list
-                    print(f"Numeric features for scaling: {numeric_features}")
-                    
-                    transformed_value = sts.transform([numeric_features])  # Transform the values
-                    print(f"Transformed {col} values: {transformed_value}")
+                numeric_features = list(filtered_raw_features.values())
+                transformed_value = sts.transform([numeric_features])
+                transformed_value_array = transformed_value.to_numpy().flatten()
+                for i, col_name in enumerate(filtered_raw_features.keys()):
+                    final_features[col_name] = float(transformed_value_array[i])
 
-                    # Convert the DataFrame to a NumPy array and flatten it
-                    transformed_value_array = transformed_value.to_numpy().flatten()  # Convert to array and flatten
-                    
-                    # Loop through the transformed values and add them to final_features with proper column names
-                    for i, col_name in enumerate(filtered_raw_features.keys()):
-                        final_features[col_name] = float(transformed_value_array[i])
-                        print(f"Scaled {col_name} value:", transformed_value_array[i])
-                except Exception as e:
-                    raise HTTPException(status_code=500, detail=f"Error during scaling: {str(e)}")
-
-
-        # --- Build Final Feature Vector ---
+        # Build final feature vector
         vector_parts = []
         for col in ORDER_OF_FEATURE_INPUT:
             if col not in final_features:
                 raise HTTPException(status_code=400, detail=f"Missing processed feature: {col}")
             vector_parts.append(np.array([[final_features[col]]]))
 
-        try:
-            feature_vector = np.hstack(vector_parts)
-            print("Final feature vector constructed:", feature_vector)
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error concatenating feature vector: {str(e)}")
-
-        # --- Make the Prediction ---
-        try:
-            cluster_pred = kmeans.predict(feature_vector)
-            print("Cluster prediction output:", cluster_pred)
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error during prediction: {str(e)}")
-
+        feature_vector = np.hstack(vector_parts)
+        cluster_pred = kmeans.predict(feature_vector)
         prediction_value = float(cluster_pred[0])
-        print("Final prediction value:", prediction_value)
 
-        # --- Save the Prediction to the Database ---
+        # Create Prediction object (do NOT commit yet)
         db_prediction = Prediction(
-            features=raw_features,  # or use final_features if you wish to store processed values
+            features=raw_features,
             prediction=prediction_value
         )
-        db.add(db_prediction)
-        db.commit()
-        db.refresh(db_prediction)
-        predictions.append(db_prediction)
+        predictions.append(db_prediction)  # Append to the list for batch save
 
+    # --- NEW: Save all predictions at once ---
+    db.add_all(predictions)   # Add all objects in one call
+    db.commit()               # Single commit for all inserts
+    for p in predictions:     # Refresh each object so IDs etc. are populated
+        db.refresh(p)
+
+    # --- Return response ---
     if len(predictions) == 1:
         return predictions[0]
     else:
         return predictions
+
 
 # --- PAST PREDICTIONS ENDPOINT ---
 @app.get("/past-predictions", response_model=List[PredictionResponse])
