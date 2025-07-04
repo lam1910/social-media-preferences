@@ -28,6 +28,12 @@
       "id": "grafana-postgresql-datasource",
       "name": "PostgreSQL",
       "version": "12.0.2"
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
     }
   ],
   "annotations": {
@@ -46,7 +52,7 @@
       }
     ]
   },
-  "description": "Data Drift Monitoring For Data Scienctist",
+  "description": "Nice dashboard for Data engineer of the friends-app",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
@@ -61,144 +67,6 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "#808080",
-            "mode": "fixed"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisGridShow": true,
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "axisSoftMax": 100,
-            "axisSoftMin": -1,
-            "fillOpacity": 80,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineWidth": 1,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "max": 6000,
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              }
-            ]
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "count"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "green",
-                  "mode": "fixed"
-                }
-              },
-              {
-                "id": "displayName",
-                "value": "Training"
-              },
-              {
-                "id": "fieldMinMax",
-                "value": false
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 0
-      },
-      "id": 1,
-      "options": {
-        "barRadius": 0,
-        "barWidth": 1,
-        "colorByField": "count",
-        "fullHighlight": true,
-        "groupWidth": 1,
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "orientation": "vertical",
-        "showValue": "always",
-        "stacking": "none",
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        },
-        "xField": "value",
-        "xTickLabelRotation": 0,
-        "xTickLabelSpacing": 100
-      },
-      "pluginVersion": "12.0.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
-          },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT\r\n  value::int AS value,\r\n  count\r\nFROM\r\n  training_feature_distribution\r\nWHERE\r\n  feature_name = 'age'\r\nORDER BY\r\n  value\r\n",
-          "refId": "A",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
-        }
-      ],
-      "title": "Training Age Distribution",
-      "type": "barchart"
-    },
-    {
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
             "mode": "palette-classic"
           },
           "custom": {
@@ -239,12 +107,12 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
+        "h": 11,
+        "w": 24,
+        "x": 0,
         "y": 0
       },
-      "id": 4,
+      "id": 8,
       "options": {
         "barRadius": 0,
         "barWidth": 0.97,
@@ -264,7 +132,6 @@
           "mode": "single",
           "sort": "none"
         },
-        "xField": "value",
         "xTickLabelRotation": 0,
         "xTickLabelSpacing": 0
       },
@@ -274,7 +141,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\r\n  CAST(features->>'age' AS INTEGER) AS value,\r\n  COUNT(*) AS count\r\nFROM\r\n  past_predictions\r\nWHERE\r\n  insertion_timestamp >= NOW() - interval '2 minutes'\r\n  AND features->>'age' IS NOT NULL\r\n  AND CAST(features->>'age' AS INTEGER) BETWEEN 0 AND 600\r\nGROUP BY\r\n  value\r\nORDER BY\r\n  value;\r\n\r\n",
+          "rawSql": "WITH categorized AS (\r\n  SELECT\r\n    CASE\r\n      WHEN (num_affected_samples::decimal / NULLIF(num_samples, 0)) <= 0.10 THEN 'Quite good'\r\n      WHEN (num_affected_samples::decimal / NULLIF(num_samples, 0)) > 0.10 AND (num_affected_samples::decimal / NULLIF(num_samples, 0)) <= 0.30 THEN 'To be reviewed'\r\n      WHEN (num_affected_samples::decimal / NULLIF(num_samples, 0)) > 0.30 THEN 'Toxic'\r\n      ELSE 'Unknown'\r\n    END AS quality_category\r\n  FROM\r\n    marketing_ingestion_statistics.batch_columns_stats\r\n  WHERE\r\n    insertion_timestamp >= NOW() - interval '10 minutes'\r\n)\r\nSELECT\r\n  quality_category,\r\n  COALESCE(ROUND(COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM categorized),0),2),0) AS percent_of_total\r\nFROM\r\n  categorized\r\nGROUP BY\r\n  quality_category\r\nORDER BY\r\n  quality_category;\r\n",
           "refId": "A",
           "sql": {
             "columns": [
@@ -299,7 +166,7 @@
           }
         }
       ],
-      "title": "Inference age distribution",
+      "title": "Batch Quality Segmentation (Last 10 min)",
       "type": "barchart"
     },
     {
@@ -310,41 +177,52 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "#808080",
+            "fixedColor": "transparent",
             "mode": "fixed"
           },
           "custom": {
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisGridShow": true,
             "axisLabel": "",
             "axisPlacement": "auto",
-            "axisSoftMax": 100,
-            "axisSoftMin": -1,
-            "fillOpacity": 80,
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
             "lineWidth": 1,
+            "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
             "thresholdsStyle": {
-              "mode": "off"
+              "mode": "line"
             }
           },
           "mappings": [],
-          "max": 6000,
-          "min": 0,
           "thresholds": {
-            "mode": "absolute",
+            "mode": "percentage",
             "steps": [
               {
                 "color": "green"
+              },
+              {
+                "color": "#EAB839",
+                "value": 20
               }
             ]
           }
@@ -353,61 +231,341 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "count"
+              "options": "valid_rate"
             },
             "properties": [
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "green",
+                  "fixedColor": "dark-green",
                   "mode": "fixed"
                 }
-              },
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "invalid_rate"
+            },
+            "properties": [
               {
-                "id": "displayName",
-                "value": "Training"
-              },
-              {
-                "id": "fieldMinMax",
-                "value": false
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-red",
+                  "mode": "fixed"
+                }
               }
             ]
           }
         ]
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
+        "h": 12,
+        "w": 24,
         "x": 0,
-        "y": 8
+        "y": 11
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "hide": false,
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n  date_trunc('minute', insertion_timestamp) AS time,\r\n  ROUND(100.0 * SUM(num_data_errors)::numeric / NULLIF(SUM(num_samples), 0), 2) AS invalid_rate,\r\n  ROUND(100.0 - (100.0 * SUM(num_data_errors)::numeric / NULLIF(SUM(num_samples), 0)), 2) AS valid_rate\r\nFROM marketing_ingestion_statistics.batch_columns_stats\r\nWHERE $__timeFilter(insertion_timestamp)\r\nGROUP BY time\r\nORDER BY time;",
+          "refId": "B",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Valid and Invalid Sample Rates",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "transparent",
+            "mode": "palette-classic-by-name"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 3,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "#EAB839",
+                "value": 20
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "valid_rate"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "invalid_rate"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 23
       },
       "id": 5,
       "options": {
-        "barRadius": 0,
-        "barWidth": 1,
-        "colorByField": "count",
-        "fullHighlight": true,
-        "groupWidth": 1,
         "legend": {
           "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
-        "orientation": "vertical",
-        "showValue": "always",
-        "stacking": "none",
         "tooltip": {
           "hideZeros": false,
           "mode": "single",
           "sort": "none"
-        },
-        "xField": "value",
-        "xTickLabelRotation": 0,
-        "xTickLabelSpacing": 100
+        }
       },
       "pluginVersion": "12.0.2",
       "targets": [
+        {
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH total_per_minute AS (\r\n  SELECT\r\n    date_trunc('minute', insertion_timestamp) AS time,\r\n    SUM(num_samples) AS total_samples\r\n  FROM marketing_ingestion_statistics.batch_columns_stats\r\n  WHERE $__timeFilter(insertion_timestamp)\r\n  GROUP BY time\r\n),\r\nerror_breakdown AS (\r\n  SELECT\r\n    date_trunc('minute', insertion_timestamp) AS time,\r\n    error_type,\r\n    SUM(num_affected_records) AS error_count\r\n  FROM marketing_ingestion_statistics.feature_error_stats\r\n  WHERE $__timeFilter(insertion_timestamp)\r\n  GROUP BY time, error_type\r\n)\r\nSELECT\r\n  t.time,\r\n  e.error_type,\r\n  ROUND(100.0 * e.error_count::numeric / NULLIF(t.total_samples, 0), 2) AS error_rate\r\nFROM total_per_minute t\r\nJOIN error_breakdown e ON e.time = t.time\r\nORDER BY t.time, e.error_type;\r\n",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
+          }
+        }
+      ],
+      "title": "Individual Error Rates",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 35
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.2",
+      "targets": [
+        {
+          "editorMode": "code",
+          "format": "table",
+          "hide": false,
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n  date_trunc('minute', insertion_timestamp)::timestamp AS time,\r\n  COUNT(*) AS missing_errors\r\nFROM marketing_ingestion_statistics.column_error_types\r\nWHERE $__timeFilter(insertion_timestamp)\r\n  AND col_error_type = 'missing'\r\nGROUP BY time\r\nORDER BY time;\r\n",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
+          }
+        },
         {
           "datasource": {
             "type": "grafana-postgresql-datasource",
@@ -415,9 +573,10 @@
           },
           "editorMode": "code",
           "format": "table",
+          "hide": false,
           "rawQuery": true,
-          "rawSql": "SELECT\r\n  value::int AS value,\r\n  count\r\nFROM\r\n  training_feature_distribution\r\nWHERE\r\n  feature_name = 'gradyear'\r\nORDER BY\r\n  value\r\n",
-          "refId": "A",
+          "rawSql": "SELECT\r\n  date_trunc('minute', insertion_timestamp)::timestamp AS time,\r\n  COUNT(*) AS new_errors\r\nFROM marketing_ingestion_statistics.column_error_types\r\nWHERE $__timeFilter(insertion_timestamp)\r\n  AND col_error_type = 'new'\r\nGROUP BY time\r\nORDER BY time;\r\n",
+          "refId": "B",
           "sql": {
             "columns": [
               {
@@ -437,8 +596,8 @@
           }
         }
       ],
-      "title": "Training gradyear Distribution",
-      "type": "barchart"
+      "title": "Missing and New errors",
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -448,7 +607,8 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "fixedColor": "dark-red",
+            "mode": "fixed"
           },
           "custom": {
             "axisBorderShow": false,
@@ -463,7 +623,7 @@
               "tooltip": false,
               "viz": false
             },
-            "lineWidth": 1,
+            "lineWidth": 0,
             "scaleDistribution": {
               "type": "linear"
             },
@@ -488,264 +648,16 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 8
-      },
-      "id": 3,
-      "options": {
-        "barRadius": 0,
-        "barWidth": 0.97,
-        "fullHighlight": false,
-        "groupWidth": 0.7,
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "orientation": "auto",
-        "showValue": "auto",
-        "stacking": "none",
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        },
-        "xField": "value",
-        "xTickLabelRotation": 0,
-        "xTickLabelSpacing": 0
-      },
-      "pluginVersion": "12.0.2",
-      "targets": [
-        {
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT\r\n  CAST(features->>'gradyear' AS INTEGER) AS value,\r\n  COUNT(*) AS count\r\nFROM\r\n  past_predictions\r\nWHERE\r\n  insertion_timestamp >= NOW() - interval '2 minutes'\r\n  AND features->>'gradyear' IS NOT NULL\r\n  AND CAST(features->>'gradyear' AS INTEGER) BETWEEN 1900 AND 2025\r\nGROUP BY\r\n  value\r\nORDER BY\r\n  value;\r\n",
-          "refId": "A",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          },
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
-          }
-        }
-      ],
-      "title": "Inference gradyear distribution ",
-      "type": "barchart"
-    },
-    {
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "#808080",
-            "mode": "fixed"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisGridShow": true,
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "axisSoftMax": 100,
-            "axisSoftMin": -1,
-            "fillOpacity": 80,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineWidth": 1,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "max": 6000,
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              }
-            ]
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "count"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "green",
-                  "mode": "fixed"
-                }
-              },
-              {
-                "id": "displayName",
-                "value": "Training"
-              },
-              {
-                "id": "fieldMinMax",
-                "value": false
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
+        "h": 14,
+        "w": 24,
         "x": 0,
-        "y": 16
+        "y": 47
       },
       "id": 6,
       "options": {
         "barRadius": 0,
-        "barWidth": 1,
-        "colorByField": "count",
-        "fullHighlight": true,
-        "groupWidth": 1,
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "orientation": "vertical",
-        "showValue": "always",
-        "stacking": "none",
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        },
-        "xField": "value",
-        "xTickLabelRotation": 0,
-        "xTickLabelSpacing": 100
-      },
-      "pluginVersion": "12.0.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
-          },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT\r\n  value::int AS value,\r\n  count\r\nFROM\r\n  training_feature_distribution\r\nWHERE\r\n  feature_name = 'NumberOffriends'\r\nORDER BY\r\n  value\r\n",
-          "refId": "A",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
-        }
-      ],
-      "title": "Training Number Of friends Distribution",
-      "type": "barchart"
-    },
-    {
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "fillOpacity": 80,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineWidth": 1,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 16
-      },
-      "id": 2,
-      "options": {
-        "barRadius": 0,
         "barWidth": 0.97,
+        "colorByField": "error_type",
         "fullHighlight": false,
         "groupWidth": 0.7,
         "legend": {
@@ -754,15 +666,15 @@
           "placement": "bottom",
           "showLegend": true
         },
-        "orientation": "auto",
+        "orientation": "vertical",
         "showValue": "auto",
-        "stacking": "none",
+        "stacking": "normal",
         "tooltip": {
           "hideZeros": false,
           "mode": "single",
           "sort": "none"
         },
-        "xField": "value",
+        "xField": "feature",
         "xTickLabelRotation": 0,
         "xTickLabelSpacing": 0
       },
@@ -772,7 +684,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\r\n  CAST(features->>'NumberOffriends' AS INTEGER) AS value,\r\n  COUNT(*) AS count\r\nFROM\r\n  past_predictions\r\nWHERE\r\n  insertion_timestamp >= NOW() - interval '2 minutes'\r\n  AND features->>'NumberOffriends' IS NOT NULL\r\n  AND CAST(features->>'NumberOffriends' AS INTEGER) BETWEEN 0 AND 600\r\nGROUP BY\r\n  value\r\nORDER BY\r\n  value;\r\n",
+          "rawSql": "SELECT\r\n  f.feature,\r\n  f.error_type,\r\n  SUM(f.num_affected_records) AS error_count\r\nFROM marketing_ingestion_statistics.feature_error_stats f\r\nGROUP BY f.feature, f.error_type\r\nORDER BY error_count DESC;\r\n",
           "refId": "A",
           "sql": {
             "columns": [
@@ -797,24 +709,43 @@
           }
         }
       ],
-      "title": " Inference Number of friends distribution",
+      "title": "Failed Expectation (By Feature)",
+      "transformations": [
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "error_count": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "feature": {
+                "aggregations": [],
+                "operation": "groupby"
+              }
+            }
+          }
+        }
+      ],
       "type": "barchart"
     }
   ],
-  "refresh": "30s",
+  "refresh": "5s",
   "schemaVersion": 41,
   "tags": [],
   "templating": {
     "list": []
   },
   "time": {
-    "from": "now-5m",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {},
-  "timezone": "browser",
-  "title": "Data Drift Monitoring",
-  "uid": "f49745ab-028a-4204-aa3b-d5cd4671b310",
-  "version": 5,
+  "timezone": "",
+  "title": "Dashboard for Data Engineer",
+  "uid": "beqm83jwzttz4b",
+  "version": 7,
   "weekStart": ""
 }
