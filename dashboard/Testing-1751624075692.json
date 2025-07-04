@@ -29,6 +29,112 @@
       "fieldConfig": {
         "defaults": {
           "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 8,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "11.6.0",
+      "targets": [
+        {
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH categorized AS (\r\n  SELECT\r\n    CASE\r\n      WHEN (num_affected_samples::decimal / NULLIF(num_samples, 0)) <= 0.10 THEN 'Quite good'\r\n      WHEN (num_affected_samples::decimal / NULLIF(num_samples, 0)) > 0.10 AND (num_affected_samples::decimal / NULLIF(num_samples, 0)) <= 0.30 THEN 'To be reviewed'\r\n      WHEN (num_affected_samples::decimal / NULLIF(num_samples, 0)) > 0.30 THEN 'Toxic'\r\n      ELSE 'Unknown'\r\n    END AS quality_category\r\n  FROM\r\n    marketing_ingestion_statistics.batch_columns_stats\r\n  WHERE\r\n    insertion_timestamp >= NOW() - interval '2 minutes'\r\n)\r\nSELECT\r\n  quality_category,\r\n  COALESCE(ROUND(COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM categorized),0),2),0) AS percent_of_total\r\nFROM\r\n  categorized\r\nGROUP BY\r\n  quality_category\r\nORDER BY\r\n  quality_category;\r\n",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Batch Quality Segmentation (Last 10 min)",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "dekz2kzpdt88wd"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
             "fixedColor": "transparent",
             "mode": "fixed"
           },
@@ -116,7 +222,7 @@
         "h": 12,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 11
       },
       "id": 7,
       "options": {
@@ -262,7 +368,7 @@
         "h": 12,
         "w": 24,
         "x": 0,
-        "y": 12
+        "y": 23
       },
       "id": 5,
       "options": {
@@ -367,7 +473,7 @@
         "h": 12,
         "w": 24,
         "x": 0,
-        "y": 24
+        "y": 35
       },
       "id": 4,
       "options": {
@@ -451,7 +557,8 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "fixedColor": "dark-red",
+            "mode": "fixed"
           },
           "custom": {
             "axisBorderShow": false,
@@ -466,7 +573,7 @@
               "tooltip": false,
               "viz": false
             },
-            "lineWidth": 1,
+            "lineWidth": 0,
             "scaleDistribution": {
               "type": "linear"
             },
@@ -494,12 +601,13 @@
         "h": 14,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 47
       },
       "id": 6,
       "options": {
         "barRadius": 0,
         "barWidth": 0.97,
+        "colorByField": "error_type",
         "fullHighlight": false,
         "groupWidth": 0.7,
         "legend": {
@@ -508,14 +616,15 @@
           "placement": "bottom",
           "showLegend": true
         },
-        "orientation": "auto",
+        "orientation": "vertical",
         "showValue": "auto",
-        "stacking": "none",
+        "stacking": "normal",
         "tooltip": {
           "hideZeros": false,
           "mode": "single",
           "sort": "none"
         },
+        "xField": "feature",
         "xTickLabelRotation": 0,
         "xTickLabelSpacing": 0
       },
@@ -547,6 +656,25 @@
         }
       ],
       "title": "Failed Expectation (By Feature)",
+      "transformations": [
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "error_count": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "feature": {
+                "aggregations": [],
+                "operation": "groupby"
+              }
+            }
+          }
+        }
+      ],
       "type": "barchart"
     }
   ],
@@ -565,5 +693,5 @@
   "timezone": "",
   "title": "Testing",
   "uid": "beqm83jwzttz4b",
-  "version": 41
+  "version": 44
 }
