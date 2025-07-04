@@ -160,7 +160,7 @@ def _send_alerts(**context):
     from pathlib import Path
 
     get_gxe_report_res = context['task_instance'].xcom_pull(task_ids='validate_data', key='return_value')
-    file_name = context['ti'].xcom_pull(task_ids='read_data', key='return_value').split('/')[5]
+    file_name = context['ti'].xcom_pull(task_ids='read_data', key='return_value').split('/')[5].split('.')[0]
     success = get_gxe_report_res['success']
     success_percent = get_gxe_report_res['statistics']['success_percent']
 
@@ -177,7 +177,7 @@ def _send_alerts(**context):
             "themeColor": "0078D7",
             "sections": [
                 {
-                    "activityTitle": f"Task {context['task_instance_key_str']} failed",
+                    "activityTitle": f"Task validate_data detected data quality issues",
                     "activitySubtitle": f"DAG: {context['dag'].dag_id}",
                     "facts": [
                         {
@@ -193,10 +193,10 @@ def _send_alerts(**context):
             ],
             "potentialAction": [{
                 "@type": "OpenUri",
-                "name": "View Logs",
+                "name": "View Report",
                 "targets": [{
                     "os": "default",
-                    "uri": context['task_instance'].log_url
+                    "uri": f'http://localhost:8080/gxe_reports_static/{file_name}.html'
                 }]
             }]
         }
