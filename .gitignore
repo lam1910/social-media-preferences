@@ -253,3 +253,6 @@ fabric.properties
 
 # mock_data_issues
 mock_data_issues/__pycache__
+
+# gxe_validation_reports
+gxe_validation_reports/reports

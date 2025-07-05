@@ -9,6 +9,7 @@ from airflow.operators.dummy import DummyOperator # type:ignore
 from airflow.operators.python import PythonOperator
 
 from modules.mock_data_issues.generate_data_issues import generate_data_issues #type: ignore
+from modules.gxe_validation_reports.validation_report_generator import build_validation_report
 
 from great_expectations import ExpectationSuite
 import great_expectations.expectations as gxe # type: ignore
@@ -93,9 +94,12 @@ def parse_gxe_output(gxe_output: dict, file_name: str) -> dict:
         "feature_error_stats": feature_error_stats,
     }
 
+    import os
+import json
+
+
 
 def _save_statistics(ti):
-    from pathlib import Path
 
     ddl_queries_path = '/opt/airflow/scripts/sql/ingestion_statistics_demo_ver.sql'
     gxe_output = ti.xcom_pull(task_ids='validate_data', key='return_value')
@@ -153,11 +157,14 @@ def _save_statistics(ti):
 
 def _send_alerts(**context):
     import requests
-    
+    from pathlib import Path
+
     get_gxe_report_res = context['task_instance'].xcom_pull(task_ids='validate_data', key='return_value')
+    file_name = context['ti'].xcom_pull(task_ids='read_data', key='return_value').split('/')[5].split('.')[0]
     success = get_gxe_report_res['success']
     success_percent = get_gxe_report_res['statistics']['success_percent']
 
+    report_file = build_validation_report(get_gxe_report_res, file_name)
     
     if not success and success_percent < 100:
         criticallity = 'High' if success_percent <= 50 else 'medium' if success_percent <= 85 else 'low'
@@ -170,7 +177,7 @@ def _send_alerts(**context):
             "themeColor": "0078D7",
             "sections": [
                 {
-                    "activityTitle": f"Task {context['task_instance_key_str']} failed",
+                    "activityTitle": f"Task validate_data detected data quality issues",
                     "activitySubtitle": f"DAG: {context['dag'].dag_id}",
                     "facts": [
                         {
@@ -186,10 +193,10 @@ def _send_alerts(**context):
             ],
             "potentialAction": [{
                 "@type": "OpenUri",
-                "name": "View Logs",
+                "name": "View Report",
                 "targets": [{
                     "os": "default",
-                    "uri": context['task_instance'].log_url
+                    "uri": f'http://localhost:8080/gxe_reports_static/{file_name}.html'
                 }]
             }]
         }
@@ -303,7 +310,7 @@ with DAG (
             df = conn.execute('SELECT * FROM latest').fetchdf()
 
             if mock_issues:
-                print("Generating data issues...")
+                print('Generating data issues...')
                 df = generate_data_issues(dataframe=df, chances=0.5)
                 conn.execute('CREATE OR REPLACE TABLE latest AS SELECT * FROM df')
 
@@ -322,11 +329,11 @@ with DAG (
 
     
     validate_data = GXValidateDataFrameOperator(
-        task_id="validate_data",
+        task_id='validate_data',
         configure_dataframe=retrieve_df_for_gx_validation,
         expect=expectation_suite,
-        context_type="ephemeral",
-        result_format="COMPLETE",
+        context_type='ephemeral',
+        result_format='COMPLETE',
     )
 
 
@@ -338,7 +345,7 @@ with DAG (
         df = conn.execute('SELECT * FROM latest').fetchdf()
         print(f'DF columns: {df.columns}')
         print(f'Number of columns: {len(df.columns)}')
-        current_file_name = ti.xcom_pull(task_ids="read_data", key="return_value").split('/')[5]
+        current_file_name = ti.xcom_pull(task_ids='read_data', key='return_value').split('/')[5]
         bad_data_save_path = f'/opt/airflow/data/bad_data/bad_{current_file_name}'
         good_data_save_path = f'/opt/airflow/data/good_data/{current_file_name}'
         gx_output = ti.xcom_pull(task_ids='validate_data', key='return_value')
